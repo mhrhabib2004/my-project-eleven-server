@@ -26,11 +26,16 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
     const addsbookcollection = client.db('addbookDb').collection('books');
 
     app.get('/addbook',async(req,res)=>{
-        const cursor= addsbookcollection.find();
+        const category = req.query.category;
+        let query = {};
+        if (category) {
+            query = { category: category };
+        }
+        const cursor= addsbookcollection.find(query);
         const result = await cursor.toArray();
         res.send(result)
     })
@@ -50,8 +55,7 @@ async function run() {
         res.send(result);
 
      })
-
-
+     
     app.put(`/addbook/:id`,async(req,res)=>{
         const id =req.params.id;
         const filter= {_id:new ObjectId(id)}
