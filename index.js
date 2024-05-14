@@ -28,6 +28,7 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
     const addsbookcollection = client.db('addbookDb').collection('books');
+    const Borrowbookcollection = client.db('addbookDb').collection('borrowbooks');
 
     app.get('/addbook',async(req,res)=>{
         const category = req.query.category;
@@ -38,6 +39,19 @@ async function run() {
         const cursor= addsbookcollection.find(query);
         const result = await cursor.toArray();
         res.send(result)
+    })
+
+    app.get('/borrow',async(req,res)=>{
+        const cursor= Borrowbookcollection.find();
+        const result = await cursor.toArray();
+        res.send(result)
+    })
+
+    app.post('/borrow',async(req,res)=>{
+        const newborrowbooks = req.body;
+        const result =await Borrowbookcollection.insertOne(newborrowbooks);
+        
+        res.send(result);
     })
 
     app.post('/addbook',async(req,res)=>{
@@ -55,7 +69,7 @@ async function run() {
         res.send(result);
 
      })
-     
+
     app.put(`/addbook/:id`,async(req,res)=>{
         const id =req.params.id;
         const filter= {_id:new ObjectId(id)}
