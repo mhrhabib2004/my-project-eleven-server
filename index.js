@@ -1,13 +1,19 @@
 const express = require('express');
 const cors = require('cors');
+const jwt =require('jsonwebtoken')
+const cookiePerser = require('cookie-parser');
 require('dotenv').config();
 const app=express();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const port = process.env.PORT || 5000;
 
 
-app.use(cors());
+app.use(cors({
+    origin:['https://assainment-eleven-library.web.app',],
+    credentials: true
+}));
 app.use(express.json());
+app.use(cookiePerser());
 
 
 
@@ -23,15 +29,55 @@ const client = new MongoClient(uri, {
   }
 });
 
+const logger =async(req,res,next)=>{
+
+    // console.log('called:', req.host,req.originalUrl);
+    next();
+}
+
+const verifyToken = async(req,res,next)=>{
+    const token=req?.cookies?.token;
+    // console.log(token)
+if(!token){
+    return res.status(401).send({massage: 'not authoraize'})
+}
+jwt.verify(token,process.env.ACCESS_TOKEN_SECRET,(err,decoded)=>{
+    if(err){
+        console.log(err)
+        return res.status(401).send({massage:'unauthoris'})
+    }
+    // console.log('value in the token',decoded)
+    req.user=decoded;
+    next();
+})
+    
+}
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
     const addsbookcollection = client.db('addbookDb').collection('books');
     const Borrowbookcollection = client.db('addbookDb').collection('borrowbooks');
+// token releted
+    app.post('/jwt',logger,async(req,res)=>{
+        const user = req.body;
+        console.log(user);
+        const token = jwt.sign(user,process.env.ACCESS_TOKEN_SECRET,{expiresIn:'1h'})
+        res
+        .cookie('token',token,{
+            httpOnly:true,
+            secure:true,
+            sameSite: 'none'
+        })
+        .send({succes: true})
+    })
 
-    app.get('/addbook',async(req,res)=>{
-        const category = req.query.category;
+    // service releted
+    app.get('/addbook',logger,verifyToken,async(req,res)=>{
+        const category = req.query?.category;
+        // console.log('tok tok token',req.cookies.token);
+       
         let query = {};
         if (category) {
             query = { category: category };
@@ -54,15 +100,16 @@ async function run() {
         res.send(result);
     })
 
-    app.post('/addbook',async(req,res)=>{
+    app.post('/addbook',logger,async(req,res)=>{
+        
         const booksData = req.body;
-        console.log(booksData);
+        // console.log(booksData);
         const result =await addsbookcollection.insertOne(booksData);
         
         res.send(result);
     })
 
-    app.get('/addbook/:id',async(req,res)=>{
+    app.get('/addbook/:id',logger,async(req,res)=>{
         const id =req.params.id;
         const query={_id : new ObjectId(id)}
         const result = await addsbookcollection.findOne(query)
@@ -70,7 +117,7 @@ async function run() {
 
      })
 
-    app.put(`/addbook/:id`,async(req,res)=>{
+    app.put(`/addbook/:id`,logger,async(req,res)=>{
         const id =req.params.id;
         const filter= {_id:new ObjectId(id)}
         const options = {upsert : true};
@@ -89,7 +136,7 @@ async function run() {
         res.send(result);
     })
 
-    app.delete('/borrow/:id',async(req,res)=>{
+    app.delete('/borrow/:id',logger,async(req,res)=>{
         const id =req.params.id;
         const query={_id:new ObjectId(id)}
         const result = await Borrowbookcollection.deleteOne(query);
