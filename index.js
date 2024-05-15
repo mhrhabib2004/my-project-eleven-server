@@ -9,7 +9,7 @@ const port = process.env.PORT || 5000;
 
 
 app.use(cors({
-    origin:['https://assainment-eleven-library.web.app',],
+    origin:['https://assainment-eleven-library.web.app','http://localhost:5173'],
     credentials: true
 }));
 app.use(express.json());
@@ -60,17 +60,43 @@ async function run() {
     const addsbookcollection = client.db('addbookDb').collection('books');
     const Borrowbookcollection = client.db('addbookDb').collection('borrowbooks');
 // token releted
-    app.post('/jwt',logger,async(req,res)=>{
+    // app.post('/jwt',logger,async(req,res)=>{
+    //     const user = req.body;
+    //     console.log(user);
+    //     const token = jwt.sign(user,process.env.ACCESS_TOKEN_SECRET,{expiresIn:'1h'})
+    //     res
+    //     .cookie('token',token,{
+    //         httpOnly:true,
+    //         secure:true,
+    //         sameSite: 'none'
+    //     })
+    //     .send({succes: true})
+    // })
+    app.post('/jwt', logger,  async (req, res) => {
         const user = req.body;
-        console.log(user);
-        const token = jwt.sign(user,process.env.ACCESS_TOKEN_SECRET,{expiresIn:'1h'})
-        res
-        .cookie('token',token,{
-            httpOnly:true,
-            secure:true,
-            sameSite: 'none'
+        console.log('user for token', user);
+        const token = jwt.sign(user,process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
+
+        // res.send({ token });
+
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV=== 'production' ? 'none' : 'strict',
         })
-        .send({succes: true})
+            .send({ success: true });
+    })
+
+    //  JWT Api LogOut function or token clear
+    app.post('/logout', logger,  async (req, res) => {
+        const user = req.body;
+        console.log('logging out', user);
+        res.clearCookie('token', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+            maxAge: 0,
+        }).send({ success: true })
     })
 
     // service releted
